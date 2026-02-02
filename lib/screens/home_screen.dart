@@ -52,7 +52,7 @@ class HomeScreen extends StatelessWidget {
                 builder: (context) => AlertDialog(
                   title: const Text('Total Savings'),
                   content: Text(
-                    '\$${savings.toStringAsFixed(2)}',
+                    '${context.read<FinanceProvider>().currencySymbol}${savings.toStringAsFixed(2)}',
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
                   ),
                   actions: [
@@ -237,10 +237,15 @@ class HomeScreen extends StatelessWidget {
                             size: 18,
                           ),
                         ),
-                        title: Text(t.category, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        title: Text(
+                          t.category == 'Loan' && t.borrowerName != null 
+                              ? 'Loan (${t.borrowerName})' 
+                              : t.category, 
+                          style: const TextStyle(fontWeight: FontWeight.w600)
+                        ),
                         subtitle: Text('${t.date.day}/${t.date.month}/${t.date.year}'),
                         trailing: Text(
-                          '${t.isIncome ? '+' : '-'}\$${t.amount.toStringAsFixed(2)}',
+                          '${t.isIncome ? '+' : '-'}${context.read<FinanceProvider>().currencySymbol}${t.amount.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: t.isIncome ? Colors.green : Colors.red,
@@ -300,7 +305,7 @@ class _SummaryCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '\$${amount.toStringAsFixed(2)}',
+                  '${context.read<FinanceProvider>().currencySymbol}${amount.toStringAsFixed(2)}',
                   style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

@@ -15,6 +15,16 @@ class FinanceProvider with ChangeNotifier {
   List<String> _users = ['Default User'];
   String _currentUser = 'Default User';
   int _startDayOfMonth = 1;
+  String _selectedCurrency = 'USD';
+
+  static const Map<String, String> _currencySymbols = {
+    'USD': '\$',
+    'INR': '₹',
+    'PKR': 'Rs.',
+    'CNY': '¥',
+    'EUR': '€',
+    'RUB': '₽',
+  };
 
   List<TransactionModel> get transactions => _transactions;
   List<CategoryModel> get categories => _categories;
@@ -26,6 +36,9 @@ class FinanceProvider with ChangeNotifier {
   List<String> get users => _users;
   String get currentUser => _currentUser;
   int get startDayOfMonth => _startDayOfMonth;
+  String get selectedCurrency => _selectedCurrency;
+  String get currencySymbol => _currencySymbols[_selectedCurrency] ?? '\$';
+  List<String> get availableCurrencies => _currencySymbols.keys.toList();
 
   FinanceProvider() {
     _init();
@@ -62,6 +75,7 @@ class FinanceProvider with ChangeNotifier {
     _users = prefs.getStringList('users_list') ?? ['Default User'];
     _currentUser = prefs.getString('current_user') ?? _users.first;
     _startDayOfMonth = prefs.getInt('startDayOfMonth') ?? 1;
+    _selectedCurrency = prefs.getString('selectedCurrency') ?? 'USD';
 
     final imagesJson = prefs.getString('user_images');
     if (imagesJson != null) {
@@ -84,7 +98,17 @@ class FinanceProvider with ChangeNotifier {
       _categories = [
         CategoryModel(name: 'Salary', isIncome: true),
         CategoryModel(name: 'Food', isIncome: false),
+        CategoryModel(name: 'Loan', isIncome: false),
       ];
+    }
+
+    // Ensure 'Loan' category exists for all users
+    bool hasLoan = _categories.any((c) => c.name == 'Loan' && !c.isIncome);
+    if (!hasLoan) {
+      _categories.add(CategoryModel(name: 'Loan', isIncome: false));
+      // Save it immediately so it persists
+      final List encoded = _categories.map((e) => e.toMap()).toList();
+      await prefs.setString('${_currentUser}_categories', jsonEncode(encoded));
     }
 
     final transData = prefs.getString('${_currentUser}_transactions');
@@ -149,6 +173,14 @@ class FinanceProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setSelectedCurrency(String currency) async {
+    if (!_currencySymbols.containsKey(currency)) return;
+    _selectedCurrency = currency;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedCurrency', currency);
+    notifyListeners();
+  }
+
   void _calculateBalance() {
     _balance = 0;
     for (var t in _transactions) {
@@ -205,6 +237,24 @@ class FinanceProvider with ChangeNotifier {
     _transactions.add(transaction);
     _calculateBalance();
     saveTransactions();
+    notifyListeners();
+  }
+
+  void deleteTransaction(TransactionModel transaction) {
+    _transactions.remove(transaction);
+    _calculateBalance();
+    saveTransactions();
+    notifyListeners();
+  }
+
+  void updateTransaction(TransactionModel oldTx, TransactionModel newTx) {
+    final index = _transactions.indexOf(oldTx);
+    if (index != -1) {
+      _transactions[index] = newTx;
+      _calculateBalance();
+      saveTransactions();
+      notifyListeners();
+    }
   }
 
   // --- Dashboard & Filtering Calculations ---
@@ -242,12 +292,21 @@ class FinanceProvider with ChangeNotifier {
     };
 
     for (var t in _transactions) {
+      // 1. Handle normal transaction date
       if (t.date.year == year && t.date.month == month) {
         final day = t.date.day;
         if (t.isIncome) {
           stats[day]!['income'] = stats[day]!['income']! + t.amount;
         } else {
           stats[day]!['expense'] = stats[day]!['expense']! + t.amount;
+        }
+      }
+
+      // 2. Handle Loan Return Date (Virtual Income for Visualization)
+      if (!t.isIncome && t.category == 'Loan' && t.returnDate != null) {
+        if (t.returnDate!.year == year && t.returnDate!.month == month) {
+          final returnDay = t.returnDate!.day;
+          stats[returnDay]!['income'] = stats[returnDay]!['income']! + t.amount;
         }
       }
     }

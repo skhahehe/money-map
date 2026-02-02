@@ -116,6 +116,7 @@ class _StatementExportDialogState extends State<StatementExportDialog> {
         totalExpense: expense,
         netBalance: income - expense,
         periodTitle: rangeTitle,
+        currencySymbol: finance.currencySymbol,
       );
     } else {
       await PdfService.saveTransactionReport(
@@ -124,6 +125,7 @@ class _StatementExportDialogState extends State<StatementExportDialog> {
         totalExpense: expense,
         netBalance: income - expense,
         periodTitle: rangeTitle,
+        currencySymbol: finance.currencySymbol,
       );
     }
   }

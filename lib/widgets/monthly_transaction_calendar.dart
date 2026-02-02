@@ -101,7 +101,7 @@ class _CalendarCell extends StatelessWidget {
     double expensePercent = total > 0 ? (expense / total) : 0.0;
 
     final bool isEmptyPast = !isFuture && total == 0;
-    final bool isHeatmap = !isFuture && total > 0;
+    final bool isHeatmap = total > 0;
 
     // --- AESTHETIC CONTROLS (CELLS) ---
     const double dayTextSize = 13.0;       // 👈 Adjusted for better fit in larger boxes

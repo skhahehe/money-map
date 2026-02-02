@@ -217,6 +217,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         divisions: 30,
                         onChanged: (val) => finance.setStartDayOfMonth(val.toInt()),
                       ),
+                      const Divider(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Base Currency', style: TextStyle(fontSize: 16)),
+                          DropdownButton<String>(
+                            value: finance.selectedCurrency,
+                            icon: const Icon(Icons.arrow_drop_down, color: Colors.blue),
+                            underline: Container(),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue),
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                finance.setSelectedCurrency(newValue);
+                              }
+                            },
+                            items: finance.availableCurrencies.map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'This will be the default symbol used for all transactions.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ),

@@ -5,7 +5,8 @@ import '../models/transaction_model.dart';
 import '../widgets/bounce_button.dart';
 
 class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key});
+  final TransactionModel? transactionToEdit;
+  const AddTransactionSheet({super.key, this.transactionToEdit});
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -13,20 +14,69 @@ class AddTransactionSheet extends StatefulWidget {
 
 class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _amountController = TextEditingController();
+  final _borrowerController = TextEditingController();
   bool _isIncome = true;
   String? _selectedCategory;
   late DateTime _selectedDate;
+  DateTime? _returnDate;
+  String? _amountError;
+  bool _isValid = false;
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _selectedDate = DateTime(now.year, now.month, now.day);
+    if (widget.transactionToEdit != null) {
+      final t = widget.transactionToEdit!;
+      _amountController.text = t.amount.toString();
+      _isIncome = t.isIncome;
+      _selectedCategory = t.category;
+      _selectedDate = t.date;
+      _borrowerController.text = t.borrowerName ?? '';
+      _returnDate = t.returnDate;
+    } else {
+      final now = DateTime.now();
+      _selectedDate = DateTime(now.year, now.month, now.day);
+    }
+    _amountController.addListener(_validateAmount);
+    _validateAmount(); // Initial check
+  }
+
+  void _validateAmount() {
+    final text = _amountController.text;
+    if (text.isEmpty) {
+      setState(() {
+        _amountError = null;
+        _isValid = false;
+      });
+      return;
+    }
+
+    final regExp = RegExp(r'^\d*\.?\d*$');
+    if (!regExp.hasMatch(text)) {
+      setState(() {
+        _amountError = 'Only numbers and "." are allowed';
+        _isValid = false;
+      });
+    } else {
+      final amount = double.tryParse(text);
+      if (amount == null || amount <= 0) {
+        setState(() {
+          _amountError = amount == 0 ? 'Amount must be greater than 0' : null;
+          _isValid = false;
+        });
+      } else {
+        setState(() {
+          _amountError = null;
+          _isValid = true;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _amountController.dispose();
+    _borrowerController.dispose();
     super.dispose();
   }
 
@@ -43,6 +93,20 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
+    }
+  }
+
+  Future<void> _pickReturnDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _returnDate ?? today,
+      firstDate: today, // Business Rule: Cannot select returning date before today.
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() => _returnDate = picked);
     }
   }
 
@@ -76,10 +140,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'New Transaction',
+            Text(
+              widget.transactionToEdit != null ? 'Edit Transaction' : 'New Transaction',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
             SegmentedButton<bool>(
@@ -99,11 +163,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Amount',
-                prefixText: '\$ ',
-                border: OutlineInputBorder(),
+                prefixText: '${context.read<FinanceProvider>().currencySymbol} ',
+                border: const OutlineInputBorder(),
+                errorText: _amountError,
+                errorStyle: const TextStyle(color: Colors.red),
               ),
+              onChanged: (_) => _validateAmount(),
             ),
             const SizedBox(height: 16),
             if (categories.isNotEmpty)
@@ -121,6 +188,19 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             else
               const Text('No categories found.', style: TextStyle(color: Colors.red)),
             const SizedBox(height: 16),
+            
+            if (!_isIncome && _selectedCategory == 'Loan') ...[
+              TextField(
+                controller: _borrowerController,
+                decoration: const InputDecoration(
+                  labelText: 'Lent to (Borrower Name)',
+                  hintText: 'Enter name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             ListTile(
               title: Text(isToday ? 'Date: Today' : 'Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
               trailing: const Icon(Icons.calendar_today),
@@ -130,6 +210,22 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
+            
+            if (!_isIncome && _selectedCategory == 'Loan') ...[
+              const SizedBox(height: 16),
+              ListTile(
+                title: Text(_returnDate == null 
+                    ? 'Date of return: Not set' 
+                    : 'Date of return: ${_returnDate!.day}/${_returnDate!.month}/${_returnDate!.year}'),
+                trailing: const Icon(Icons.event_repeat),
+                onTap: _pickReturnDate,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+
             if (finance.isFutureDate(_selectedDate))
               const Padding(
                 padding: EdgeInsets.only(top: 8.0),
@@ -140,7 +236,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               ),
             const SizedBox(height: 24),
             BounceButton(
-              onTap: () {
+              onTap: !_isValid ? null : () {
                 final amount = double.tryParse(_amountController.text);
                 
                 // 🛡️ LAYER 2: Explicit UI Guard
@@ -161,8 +257,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     date: _selectedDate,
                     isIncome: _isIncome,
                     category: _selectedCategory!,
+                    borrowerName: (!_isIncome && _selectedCategory == 'Loan') ? _borrowerController.text : null,
+                    returnDate: (!_isIncome && _selectedCategory == 'Loan') ? _returnDate : null,
                   );
-                  context.read<FinanceProvider>().addTransaction(transaction);
+                  
+                  if (widget.transactionToEdit != null) {
+                    context.read<FinanceProvider>().updateTransaction(widget.transactionToEdit!, transaction);
+                  } else {
+                    context.read<FinanceProvider>().addTransaction(transaction);
+                  }
                   Navigator.pop(context);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -175,10 +278,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   onPressed: () {}, // Simply provide a dummy to keep it enabled visually
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: _isValid ? Colors.blue : Colors.grey.shade300,
+                    foregroundColor: _isValid ? Colors.white : Colors.grey.shade600,
+                    elevation: _isValid ? 2 : 0,
                   ),
-                  child: const Text('Save Transaction', style: TextStyle(fontSize: 16)),
+                  child: Text(
+                    widget.transactionToEdit != null ? 'Update Transaction' : 'Save Transaction', 
+                    style: const TextStyle(fontSize: 16)
+                  ),
                 ),
               ),
             ),

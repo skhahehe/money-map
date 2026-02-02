@@ -5,6 +5,7 @@ import '../models/transaction_model.dart';
 import '../widgets/monthly_transaction_calendar.dart';
 import '../widgets/statement_export_dialog.dart';
 import '../widgets/bounce_button.dart';
+import '../widgets/add_transaction_sheet.dart';
 
 class TransactionOverviewScreen extends StatefulWidget {
   const TransactionOverviewScreen({super.key});
@@ -16,6 +17,7 @@ class TransactionOverviewScreen extends StatefulWidget {
 class _TransactionOverviewScreenState extends State<TransactionOverviewScreen> {
   late int _selectedYear;
   late int _selectedMonth;
+  TransactionModel? _selectedTransaction;
 
   final List<String> _months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -42,15 +44,34 @@ class _TransactionOverviewScreenState extends State<TransactionOverviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Transactions', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          _selectedTransaction != null ? 'Edit Selected' : 'Transactions',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        leading: _selectedTransaction != null 
+          ? IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => setState(() => _selectedTransaction = null),
+            )
+          : null,
         actions: [
-          BounceButton(
-            onTap: () => _showExportOptions(context),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Icon(Icons.picture_as_pdf),
+          if (_selectedTransaction != null) ...[
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              onPressed: () => _editSelectedTransaction(context),
             ),
-          ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => _deleteSelectedTransaction(context),
+            ),
+          ] else
+            BounceButton(
+              onTap: () => _showExportOptions(context),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Icon(Icons.picture_as_pdf),
+              ),
+            ),
         ],
       ),
       body: CustomScrollView(
@@ -129,19 +150,41 @@ class _TransactionOverviewScreenState extends State<TransactionOverviewScreen> {
                             ),
                             child: ListTile(
                               dense: true,
-                              leading: CircleAvatar(
-                                radius: 18,
-                                backgroundColor: t.isIncome ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-                                child: Icon(
-                                  t.isIncome ? Icons.keyboard_double_arrow_up : Icons.keyboard_double_arrow_down,
-                                  color: t.isIncome ? Colors.green : Colors.red,
-                                  size: 16,
+                              leading: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    if (_selectedTransaction == t) {
+                                      _selectedTransaction = null;
+                                    } else {
+                                      _selectedTransaction = t;
+                                    }
+                                  });
+                                },
+                                child: CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: _selectedTransaction == t 
+                                      ? Colors.blue.withValues(alpha: 0.2)
+                                      : (t.isIncome ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1)),
+                                  child: Icon(
+                                    _selectedTransaction == t 
+                                        ? Icons.check
+                                        : (t.isIncome ? Icons.keyboard_double_arrow_up : Icons.keyboard_double_arrow_down),
+                                    color: _selectedTransaction == t 
+                                        ? Colors.blue 
+                                        : (t.isIncome ? Colors.green : Colors.red),
+                                    size: 16,
+                                  ),
                                 ),
                               ),
-                              title: Text(t.category, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              title: Text(
+                                t.category == 'Loan' && t.borrowerName != null 
+                                    ? 'Loan (${t.borrowerName})' 
+                                    : t.category, 
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+                              ),
                               subtitle: Text('${t.date.day} ${_months[t.date.month - 1]} ${t.date.year}', style: const TextStyle(fontSize: 12)),
                               trailing: Text(
-                                '${t.isIncome ? "+" : "-"}\$${t.amount.toStringAsFixed(2)}',
+                                '${t.isIncome ? "+" : "-"}${context.read<FinanceProvider>().currencySymbol}${t.amount.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -306,4 +349,40 @@ class _TransactionOverviewScreenState extends State<TransactionOverviewScreen> {
     );
   }
 
+  void _deleteSelectedTransaction(BuildContext context) {
+    if (_selectedTransaction == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Transaction'),
+        content: const Text('Are you sure you want to delete this transaction?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              context.read<FinanceProvider>().deleteTransaction(_selectedTransaction!);
+              setState(() => _selectedTransaction = null);
+              Navigator.pop(context);
+            }, 
+            child: const Text('Delete', style: TextStyle(color: Colors.red))
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editSelectedTransaction(BuildContext context) {
+    if (_selectedTransaction == null) return;
+    
+    final txToEdit = _selectedTransaction!;
+    setState(() => _selectedTransaction = null); // Deselect after choosing edit
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddTransactionSheet(transactionToEdit: txToEdit),
+    );
+  }
 }

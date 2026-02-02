@@ -3,12 +3,16 @@ class TransactionModel {
   final DateTime date;
   final bool isIncome;
   final String category;
+  final String? borrowerName;
+  final DateTime? returnDate;
 
   TransactionModel({
     required this.amount,
     required this.date,
     required this.isIncome,
     required this.category,
+    this.borrowerName,
+    this.returnDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +21,8 @@ class TransactionModel {
       'date': date.toIso8601String(),
       'isIncome': isIncome,
       'category': category,
+      'borrowerName': borrowerName,
+      'returnDate': returnDate?.toIso8601String(),
     };
   }
 
@@ -26,6 +32,8 @@ class TransactionModel {
       date: DateTime.parse(map['date']),
       isIncome: map['isIncome'],
       category: map['category'],
+      borrowerName: map['borrowerName'],
+      returnDate: map['returnDate'] != null ? DateTime.parse(map['returnDate']) : null,
     );
   }
 }

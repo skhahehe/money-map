@@ -15,6 +15,7 @@ class PdfService {
     required double totalExpense,
     required double netBalance,
     required String periodTitle,
+    required String currencySymbol,
   }) async {
     try {
       final pdf = await _generateDocument(
@@ -23,6 +24,7 @@ class PdfService {
         totalExpense, 
         netBalance, 
         periodTitle,
+        currencySymbol,
       );
       
       final bool success = await Printing.layoutPdf(
@@ -37,6 +39,7 @@ class PdfService {
           totalExpense: totalExpense,
           netBalance: netBalance,
           periodTitle: periodTitle,
+          currencySymbol: currencySymbol,
         );
       }
     } catch (e) {
@@ -46,6 +49,7 @@ class PdfService {
         totalExpense: totalExpense,
         netBalance: netBalance,
         periodTitle: periodTitle,
+        currencySymbol: currencySymbol,
       );
     }
   }
@@ -57,6 +61,7 @@ class PdfService {
     required double totalExpense,
     required double netBalance,
     required String periodTitle,
+    required String currencySymbol,
   }) async {
     final pdf = await _generateDocument(
       transactions, 
@@ -64,6 +69,7 @@ class PdfService {
       totalExpense, 
       netBalance, 
       periodTitle,
+      currencySymbol,
     );
     final bytes = await pdf.save();
     final fileName = 'Money_Map_Statement_${periodTitle.replaceAll(' ', '_')}.pdf';
@@ -99,6 +105,7 @@ class PdfService {
     double totalExpense,
     double netBalance,
     String periodTitle,
+    String currencySymbol,
   ) async {
     final pdf = pw.Document();
     final fontData = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
@@ -126,14 +133,14 @@ class PdfService {
           return [
             _buildHeader(periodTitle),
             pw.SizedBox(height: 20),
-            _buildSummary(totalIncome, totalExpense, netBalance),
+            _buildSummary(totalIncome, totalExpense, netBalance, currencySymbol),
             pw.SizedBox(height: 24),
             pw.Text(
               'Transaction Details',
               style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700),
             ),
             pw.SizedBox(height: 8),
-            _buildTransactionTable(transactions),
+            _buildTransactionTable(transactions, currencySymbol),
           ];
         },
       ),
@@ -160,7 +167,7 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildSummary(double income, double expense, double balance) {
+  static pw.Widget _buildSummary(double income, double expense, double balance, String currencySymbol) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
@@ -171,30 +178,30 @@ class PdfService {
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
         children: [
-          _summaryItem('Total Income', income, PdfColors.green700),
+          _summaryItem('Total Income', income, PdfColors.green700, currencySymbol),
           pw.Container(width: 1, height: 40, color: PdfColors.grey300),
-          _summaryItem('Total Expense', expense, PdfColors.red700),
+          _summaryItem('Total Expense', expense, PdfColors.red700, currencySymbol),
           pw.Container(width: 1, height: 40, color: PdfColors.grey300),
-          _summaryItem('Net Balance', balance, PdfColors.blue900),
+          _summaryItem('Net Balance', balance, PdfColors.blue900, currencySymbol),
         ],
       ),
     );
   }
 
-  static pw.Widget _summaryItem(String label, double amount, PdfColor color) {
+  static pw.Widget _summaryItem(String label, double amount, PdfColor color, String currencySymbol) { // Added currencySymbol
     return pw.Column(
       children: [
         pw.Text(label, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
         pw.SizedBox(height: 4),
         pw.Text(
-          '\$${amount.toStringAsFixed(2)}',
+          '$currencySymbol${amount.toStringAsFixed(2)}', // Replaced hardcoded '$'
           style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: color),
         ),
       ],
     );
   }
 
-  static pw.Widget _buildTransactionTable(List<TransactionModel> transactions) {
+  static pw.Widget _buildTransactionTable(List<TransactionModel> transactions, String currencySymbol) { // Added currencySymbol
     return pw.TableHelper.fromTextArray(
       border: null,
       headerDecoration: const pw.BoxDecoration(color: PdfColors.grey100),
@@ -209,9 +216,11 @@ class PdfService {
       data: transactions.map((t) {
         return [
           '${t.date.day}/${t.date.month}/${t.date.year}',
-          t.category,
+          t.category == 'Loan' && t.borrowerName != null 
+              ? 'Loan (${t.borrowerName})' 
+              : t.category,
           t.isIncome ? 'Income' : 'Expense',
-          '${t.isIncome ? "+" : "-"}\$${t.amount.toStringAsFixed(2)}',
+          '${t.isIncome ? "+" : "-"}$currencySymbol${t.amount.toStringAsFixed(2)}', // Replaced hardcoded '$'
         ];
       }).toList(),
       columnWidths: {
