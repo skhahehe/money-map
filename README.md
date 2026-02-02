@@ -2,6 +2,11 @@
 
 Money Map is a powerful, privacy-first finance tracking application designed for individuals who want to take control of their financial destiny without compromising their data security.
 
+## 📥 Download
+
+You can download the latest pre-compiled binaries for Android, Windows, and macOS directly from our **[Releases Page](https://github.com/skhahehe/money-map/releases)**.
+
+
 ## Features
 
 ### Comprehensive Expense Tracking
@@ -45,17 +50,43 @@ lib/
 └── widgets/            # Reusable UI components
 ```
 
-## Prerequisites
+## 🚀 Getting Started
 
-- Flutter SDK (latest stable version)
-- Dart SDK
-- Android Studio / Xcode (for emulator/device testing)
+Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
 
-## Installation
+### Prerequisites
 
-1. Clone the repository
-2. Run `flutter pub get` to install dependencies
-3. Run `flutter run` to start the application
+*   **Flutter SDK**: [Install Flutter](https://docs.flutter.dev/get-started/install)
+*   **IDE**: VS Code, Android Studio, or IntelliJ IDEA with Flutter/Dart plugins.
+
+### Installation & Running
+
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/skhahehe/money-map.git
+    cd money-map
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    flutter pub get
+    ```
+
+3.  **Run the application**
+    *   **Desktop (Windows/macOS/Linux)**:
+        ```bash
+        flutter run -d windows  # or macos / linux
+        ```
+    *   **Mobile (Android/iOS)**:
+        Connect your device or start an emulator/simulator, then:
+        ```bash
+        flutter run
+        ```
+    *   **Web**:
+        ```bash
+        flutter run -d chrome
+        ```
+
 
 ## Supported Platforms
 
