@@ -7,7 +7,8 @@ import '../models/category_model.dart';
 class FinanceProvider with ChangeNotifier {
   List<TransactionModel> _transactions = [];
   List<CategoryModel> _categories = [];
-  Map<String, String?> _userImages = {};
+  final Map<String, String?> _userImages = {};
+  final Map<String, Map<int, Map<String, double>>> _statsCache = {};
   double _balance = 0;
 
   // Settings & Users
@@ -79,7 +80,8 @@ class FinanceProvider with ChangeNotifier {
 
     final imagesJson = prefs.getString('user_images');
     if (imagesJson != null) {
-      _userImages = Map<String, String?>.from(jsonDecode(imagesJson));
+      _userImages.clear();
+      _userImages.addAll(Map<String, String?>.from(jsonDecode(imagesJson)));
     }
 
     notifyListeners();
@@ -183,6 +185,7 @@ class FinanceProvider with ChangeNotifier {
 
   void _calculateBalance() {
     _balance = 0;
+    _statsCache.clear();
     for (var t in _transactions) {
       if (t.isIncome) {
         _balance += t.amount;
@@ -285,6 +288,9 @@ class FinanceProvider with ChangeNotifier {
 
   /// 📊 Returns daily income/expense stats for a specific month/year.
   Map<int, Map<String, double>> getDailyStatsForMonth(int year, int month) {
+    final cacheKey = '$year-$month';
+    if (_statsCache.containsKey(cacheKey)) return _statsCache[cacheKey]!;
+
     final lastDayOfMonth = DateTime(year, month + 1, 0).day;
     final Map<int, Map<String, double>> stats = {
       for (int i = 1; i <= lastDayOfMonth; i++) 
@@ -310,6 +316,8 @@ class FinanceProvider with ChangeNotifier {
         }
       }
     }
+    
+    _statsCache[cacheKey] = stats;
     return stats;
   }
 

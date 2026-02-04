@@ -89,7 +89,9 @@ class RecentTransactionsScreen extends StatelessWidget {
                   ...groupTransactions.map((t) => ListTile(
                     contentPadding: const EdgeInsets.symmetric(vertical: 2),
                     leading: CircleAvatar(
-                      backgroundColor: t.isIncome ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                      backgroundColor: t.isIncome 
+                        ? Colors.green.withValues(alpha: 0.1) 
+                        : Colors.red.withValues(alpha: 0.1),
                       child: Icon(
                         t.isIncome ? Icons.arrow_upward : Icons.arrow_downward,
                         color: t.isIncome ? Colors.green : Colors.red,

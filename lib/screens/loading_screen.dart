@@ -97,7 +97,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
                     ),
                     padding: const EdgeInsets.all(20),
                     child: Image.asset(
-                      'assets/app_icon.png',
+                      'assets/icon/app_icon.png',
                       fit: BoxFit.contain,
                       // Fallback if image not found during dev
                       errorBuilder: (context, error, stackTrace) => const Icon(
@@ -149,7 +149,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
             right: 0,
             child: Center(
               child: Text(
-                '1.1V',
+                '1.1aV',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.7),
                   fontSize: 12,

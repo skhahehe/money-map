@@ -29,7 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _handleExport(BuildContext context) async {
     final success = await BackupService.exportBackup();
-    if (mounted) {
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(success ? 'Backup exported successfully!' : 'Failed to export backup.'),
@@ -41,23 +41,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _handleImport(BuildContext context, FinanceProvider finance) async {
     final success = await BackupService.importBackup();
-    if (mounted) {
-      if (success) {
-        await finance.refreshAllData();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Backup imported successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to import backup.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (!context.mounted) return;
+    
+    if (success) {
+      await finance.refreshAllData();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Backup imported successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to import backup.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

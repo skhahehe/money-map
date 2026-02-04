@@ -16,6 +16,7 @@ class BackupService {
       }
 
       final jsonString = jsonEncode(backupData);
+      final bytes = utf8.encode(jsonString);
       
       String? outputPath;
       if (kIsWeb) {
@@ -27,14 +28,28 @@ class BackupService {
           fileName: 'money_tracker_backup_${DateTime.now().millisecondsSinceEpoch}.txt',
           type: FileType.custom,
           allowedExtensions: ['txt', 'json'],
+          bytes: bytes,
         );
       }
 
       if (outputPath != null) {
-        final file = File(outputPath);
-        await file.writeAsString(jsonString);
+        debugPrint('Backup save location: $outputPath');
+        
+        // On Android, outputPath might be a Content URI (content://...)
+        // In that case, the 'bytes' parameter in saveFile should have already handled the write.
+        // We only attempt manual write if it's a regular file path and doesn't exist.
+        if (!outputPath.startsWith('content://')) {
+          final file = File(outputPath);
+          if (!await file.exists()) {
+            await file.writeAsBytes(bytes);
+            debugPrint('Manual backup write successful.');
+          }
+        } else {
+          debugPrint('Content URI detected, assuming bytes were saved by plugin.');
+        }
         return true;
       }
+      debugPrint('Backup export cancelled or failed (no path returned).');
       return false;
     } catch (e) {
       debugPrint('Error exporting backup: $e');
